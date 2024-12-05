@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Bogus;
 using Camunda.Worker.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -15,6 +16,7 @@ namespace Camunda.Worker.Execution;
 
 public class DefaultCamundaWorkerTest : IDisposable
 {
+    private readonly WorkerIdString _workerId;
     private readonly Mock<IExternalTaskClient> _clientMock = new();
     private readonly Mock<IFetchAndLockRequestProvider> _fetchAndLockRequestProviderMock = new();
     private readonly Mock<IWorkerEvents> _workerEventsMock = new();
@@ -24,21 +26,31 @@ public class DefaultCamundaWorkerTest : IDisposable
 
     public DefaultCamundaWorkerTest()
     {
+        _workerId = new("test-worker");
+
         _serviceProvider = new ServiceCollection().BuildServiceProvider();
 
-        _fetchAndLockRequestProviderMock.Setup(provider => provider.GetRequest())
+        _fetchAndLockRequestProviderMock
+            .Setup(provider => provider.GetRequest())
             .Returns(new FetchAndLockRequest("test"));
 
-        _worker = new DefaultCamundaWorker(
-            _clientMock.Object,
-            _fetchAndLockRequestProviderMock.Object,
-            Options.Create(new WorkerEvents
+        var workerEventsOptionsMock = new Mock<IOptionsMonitor<WorkerEvents>>();
+        workerEventsOptionsMock
+            .Setup(it => it.Get(_workerId.Value))
+            .Returns(new WorkerEvents
             {
                 OnFailedFetchAndLock = _workerEventsMock.Object.OnFailedFetchAndLock,
                 OnAfterProcessingAllTasks = _workerEventsMock.Object.OnAfterProcessingAllTasks
-            }),
+            });
+
+        _worker = new DefaultCamundaWorker(
+            _workerId,
+            _clientMock.Object,
+            _fetchAndLockRequestProviderMock.Object,
+            workerEventsOptionsMock.Object,
             _serviceProvider,
-            _processingServiceMock.Object
+            _processingServiceMock.Object,
+            NullLogger<DefaultCamundaWorker>.Instance
         );
     }
 

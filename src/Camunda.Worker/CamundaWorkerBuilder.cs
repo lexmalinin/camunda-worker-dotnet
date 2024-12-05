@@ -31,7 +31,7 @@ public class CamundaWorkerBuilder : ICamundaWorkerBuilder
 
     public ICamundaWorkerBuilder AddEndpointResolver(WorkerServiceFactory<IEndpointResolver> factory)
     {
-        Services.AddSingleton(provider => factory(WorkerId, provider));
+        Services.AddKeyedSingleton(WorkerId.Value, (provider, _) => factory(WorkerId, provider));
 
         return this;
     }
@@ -51,7 +51,7 @@ public class CamundaWorkerBuilder : ICamundaWorkerBuilder
         WorkerServiceFactory<IFetchAndLockRequestProvider> factory
     )
     {
-        Services.AddSingleton(provider => factory(WorkerId, provider));
+        Services.AddKeyedSingleton(WorkerId.Value, (provider, _) => factory(WorkerId, provider));
 
         return this;
     }
@@ -70,7 +70,7 @@ public class CamundaWorkerBuilder : ICamundaWorkerBuilder
     public ICamundaWorkerBuilder ConfigurePipeline(Action<IPipelineBuilder> configureAction)
     {
         Guard.NotNull(configureAction, nameof(configureAction));
-        Services.AddSingleton<IExternalTaskProcessingService>(provider =>
+        Services.AddKeyedSingleton<IExternalTaskProcessingService>(WorkerId.Value, (provider, _) =>
         {
             var externalTaskDelegate = new PipelineBuilder(provider, WorkerId)
                 .Also(configureAction)
@@ -82,7 +82,7 @@ public class CamundaWorkerBuilder : ICamundaWorkerBuilder
 
     public ICamundaWorkerBuilder ConfigureEvents(Action<WorkerEvents> configureAction)
     {
-        Services.Configure(configureAction);
+        Services.Configure(WorkerId.Value, configureAction);
         return this;
     }
 }

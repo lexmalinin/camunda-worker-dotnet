@@ -19,19 +19,20 @@ internal sealed class DefaultCamundaWorker : ICamundaWorker
     private readonly ILogger<DefaultCamundaWorker> _logger;
 
     public DefaultCamundaWorker(
+        WorkerIdString workerId,
         IExternalTaskClient externalTaskClient,
         IFetchAndLockRequestProvider fetchAndLockRequestProvider,
-        IOptions<WorkerEvents> workerEvents,
+        IOptionsMonitor<WorkerEvents> workerEvents,
         IServiceProvider serviceProvider,
         IExternalTaskProcessingService processingService,
-        ILogger<DefaultCamundaWorker>? logger = null
+        ILogger<DefaultCamundaWorker>? logger
     )
     {
-        _externalTaskClient = Guard.NotNull(externalTaskClient, nameof(externalTaskClient));
-        _fetchAndLockRequestProvider = Guard.NotNull(fetchAndLockRequestProvider, nameof(fetchAndLockRequestProvider));
-        _workerEvents = Guard.NotNull(workerEvents, nameof(workerEvents)).Value;
-        _serviceProvider = Guard.NotNull(serviceProvider, nameof(serviceProvider));
-        _processingService = Guard.NotNull(processingService, nameof(processingService));
+        _externalTaskClient = externalTaskClient;
+        _fetchAndLockRequestProvider = fetchAndLockRequestProvider;
+        _workerEvents = workerEvents.Get(workerId.Value);
+        _serviceProvider = serviceProvider;
+        _processingService = processingService;
         _logger = logger ?? NullLogger<DefaultCamundaWorker>.Instance;
     }
 

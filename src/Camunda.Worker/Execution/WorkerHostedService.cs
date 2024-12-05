@@ -7,22 +7,23 @@ using Microsoft.Extensions.Hosting;
 
 namespace Camunda.Worker.Execution;
 
-public sealed class WorkerHostedService : BackgroundService
+internal sealed class WorkerHostedService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
+    private readonly WorkerIdString _workerId;
     private readonly int _numberOfWorkers;
 
-    public WorkerHostedService(IServiceProvider serviceProvider, int numberOfWorkers)
+    public WorkerHostedService(IServiceProvider serviceProvider, WorkerIdString workerId, int numberOfWorkers)
     {
-        _serviceProvider = Guard.NotNull(serviceProvider, nameof(serviceProvider));
-        _numberOfWorkers =
-            Guard.GreaterThanOrEqual(numberOfWorkers, Constants.MinimumParallelExecutors, nameof(numberOfWorkers));
+        _serviceProvider = serviceProvider;
+        _workerId = workerId;
+        _numberOfWorkers = numberOfWorkers;
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         var activeTasks = Enumerable.Range(0, _numberOfWorkers)
-            .Select(_ => _serviceProvider.GetRequiredService<ICamundaWorker>())
+            .Select(_ => _serviceProvider.GetRequiredKeyedService<ICamundaWorker>(_workerId.Value))
             .Select(worker => worker.RunAsync(stoppingToken))
             .ToList();
         return Task.WhenAll(activeTasks);

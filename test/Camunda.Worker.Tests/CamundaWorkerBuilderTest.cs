@@ -12,12 +12,13 @@ namespace Camunda.Worker;
 
 public class CamundaWorkerBuilderTest
 {
+    private readonly WorkerIdString _workerId = new("testWorker");
     private readonly ServiceCollection _services = new();
     private readonly CamundaWorkerBuilder _builder;
 
     public CamundaWorkerBuilderTest()
     {
-        _builder = new CamundaWorkerBuilder(_services, "testWorker");
+        _builder = new CamundaWorkerBuilder(_services, _workerId);
     }
 
     [Fact]
@@ -38,7 +39,7 @@ public class CamundaWorkerBuilderTest
 
         using var provider = _services.BuildServiceProvider();
 
-        Assert.IsType<EndpointResolver>(provider.GetService<IEndpointResolver>());
+        Assert.IsType<EndpointResolver>(provider.GetKeyedService<IEndpointResolver>(_workerId.Value));
     }
 
     [Fact]
@@ -48,7 +49,7 @@ public class CamundaWorkerBuilderTest
 
         using var provider = _services.BuildServiceProvider();
 
-        Assert.IsType<FetchAndLockRequestProvider>(provider.GetService<IFetchAndLockRequestProvider>());
+        Assert.IsType<FetchAndLockRequestProvider>(provider.GetKeyedService<IFetchAndLockRequestProvider>(_workerId.Value));
     }
 
     [Fact]
